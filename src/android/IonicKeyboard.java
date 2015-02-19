@@ -6,6 +6,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.json.JSONException;
 
 import android.content.Context;
@@ -14,6 +15,9 @@ import android.util.DisplayMetrics;
 import android.view.View;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.inputmethod.InputMethodManager;
+import android.os.SystemClock;
+import android.view.MotionEvent;
+import android.view.KeyEvent;
 
 public class IonicKeyboard extends CordovaPlugin{
 
@@ -85,6 +89,34 @@ public class IonicKeyboard extends CordovaPlugin{
                     ((InputMethodManager) cordova.getActivity().getSystemService(Context.INPUT_METHOD_SERVICE)).toggleSoftInput(0, InputMethodManager.HIDE_IMPLICIT_ONLY);
                     callbackContext.success(); // Thread-safe.
                 }
+            });
+            return true;
+        }
+
+        // https://github.com/46cl/cordova-android-focus-plugin/blob/master/src/android/Focus.java
+        if ("focus".equals(action)) {
+
+            // Get device pixel density
+            DisplayMetrics metrics = this.cordova.getActivity().getApplicationContext().getResources().getDisplayMetrics();
+            float density = metrics.density;
+
+            // Get bounding positions of target element
+            JSONObject rect = args.getJSONObject(0);
+            float left = (density *  rect.getInt("left"));
+            float top = (density * rect.getInt("top"));
+            float right = (density * rect.getInt("right"));
+            float bottom = (density * rect.getInt("bottom"));
+
+            // Compute its center
+            final Integer centerLeft = (int) (left + ((right - left) / 2));
+            final Integer centerTop = (int) (top + ((bottom - top) / 2));
+
+            // Emulate click
+            cordova.getActivity().runOnUiThread(new Runnable() {
+              public void run() {
+                webView.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_DOWN, centerLeft, centerTop, 0));
+                webView.dispatchTouchEvent(MotionEvent.obtain(SystemClock.uptimeMillis(), SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, centerLeft, centerTop, 0));
+              }
             });
             return true;
         }
